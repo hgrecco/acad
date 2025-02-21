@@ -25,9 +25,9 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
     import_log = []
     with pd.ExcelFile(p, engine="openpyxl") as fi:
         for sheet_name in sorted(fi.sheet_names):
-            if sheet_name.startswith("_"):
+            if "*" in sheet_name:
                 import_log.append(
-                    f"{sheet_name} | Salteando {sheet_name}"
+                    f"{sheet_name} | Salteando {sheet_name} porque contiene * en el nombre"
                 )
                 continue
             
