@@ -133,9 +133,6 @@ def build_schedule(sdf):
 
     # Save the resulting schedule to an image file
     calendar.save(calendar_buffer)
-    # calendar.events.group_cascade_events()
-    # calendar._build_image()
-    # calendar.full_image.save(filename, "PNG")
 
 
 def main():
@@ -176,9 +173,11 @@ def main():
             selected_team = st.selectbox('Docente', options=options, index=0)
             filtered_df = df[df["Nombre"] == selected_team]
 
-            st.dataframe(filtered_df, height=300, hide_index=True, use_container_width=True)
             build_schedule(filtered_df)
             st.image(calendar_buffer)
+            
+            st.dataframe(filtered_df, height=300, hide_index=True, use_container_width=True)
+            
 
 
 
