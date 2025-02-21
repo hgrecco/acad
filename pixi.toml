@@ -1,0 +1,18 @@
+[project]
+authors = ["Hernan Grecco <hgrecco@gmail.com>"]
+channels = ["conda-forge"]
+name = "acad"
+platforms = ["osx-arm64", "linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+pandas = ">=2.2.3,<3"
+python = "==3.12"
+jupyter = ">=1.1.1,<2"
+openpyxl = ">=3.1.5,<4"
+streamlit = ">=1.42.1,<2"
+
+[pypi-dependencies]
+calendar-view = ">=2.4.8, <3"

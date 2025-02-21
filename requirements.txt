@@ -1,0 +1,5 @@
+pandas
+python
+openpyxl
+streamlit
+calendar-view
