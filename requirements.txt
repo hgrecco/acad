@@ -1,5 +1,4 @@
-pandas
-python
-openpyxl
 streamlit
+pandas
+openpyxl
 calendar-view
