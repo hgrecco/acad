@@ -167,20 +167,52 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
     return outdf
 
 
-def parse(s):
-    if pd.isna(s):
-        return
-    try:
-        dow, chk1, start, chk2, stop, chk3 = s.strip().split(" ")
-    except:
-        raise
-    assert chk1 == "de"
-    assert chk2 == "a"
-    assert chk3 == "h"
-    return (dow, start.replace(".", ":"), stop.replace(".", ":"))
+def read_into_session(content, **attrs: str):
+    df = read(
+                content,
+                required_columns=(COL_NOMBRE, "Horarios", "Confirmación docente"),
+                ffill_columns=("Carrera", "Asignatura", "Año", "Turno", "Com"),
+            )
+    
+    for k, v in attrs.items():
+        df.attrs[k] = v
+
+    st.session_state.df = df
+    st.session_state.schedule_by_name = {}
+    st.rerun()
+
+def download(url: str):
+    with st.spinner(f'Downloading {url}'):
+        download_url = url.split("?")[0] + "?download=1"
+
+        response = requests.get(download_url, stream=True)
+
+        if response.status_code != 200:
+            st.error(f"No se pudo bajar el archivo (status code {response.status_code})")
+        else:
+            read_into_session(response.content, url=url)  
 
 
-def build_schedule(sdf):
+@st.dialog("Elegí un archivo")
+def upload_file_dialog():
+    uploaded_file = st.file_uploader("Elegí un archivo", type=['xlsx'])
+    if st.button("Submit"):
+        if uploaded_file is not None:
+            read_into_session(uploaded_file)
+
+
+@st.dialog("Elegí un link")
+def download_from_sharepoint_dialog():
+    if "df" in st.session_state:
+        default = st.session_state.df.attrs.get("url")
+    else:
+        default = ""
+
+    url = st.text_input("Link al archivo", value=default)
+    if st.button("Submit"):
+        download(url)
+
+def generate_schedule_image(sch: Schedule, buffer: io.BytesIO):
     config = data.CalendarConfig(
         lang='es',
         title='Horario',
@@ -194,61 +226,76 @@ def build_schedule(sdf):
 
     calendar = Calendar.build(config)
 
-    content = []
-    # Add some events (busy periods)
-    # Here, day_of_week=0 represents Monday, 1 for Tuesday, etc.
-    for _, row in sdf.iterrows():
+    for dow, events in sorted(sch.items()):
+        for ev in events:
+            calendar.add_event(
+                day_of_week=dow,
+                start=ev.start_str, 
+                end=ev.stop_str, 
+                title=ev.title, 
+                style=EventStyles.RED if ev.tag == 2 else EventStyles.GREEN
+            )
 
-        title = f"{row['Confirmación docente']} | {row['Facultad']}, {row["Carrera"]}, {row["Asignatura"]}. {int(row["Año"])}.{row["Turno"]}.{row["Com"]} "
-
-        try:
-            dow, start, stop = parse(row["Horarios"])
-            dow = DOW_2_NUM[dow]
-            style = EventStyles.GREEN
-        except Exception as ex:
-            title += f" ({row['Horarios']}) {ex}"
-            dow = 6
-            start = "8:00"
-            stop = "9:00"
-            style = EventStyles.RED
-
-        skey = (dow, float(start.split(":")[0] if ":" in start else start))
-
-        content.append((skey, dow, start, stop, title, style))
+    calendar.save(buffer)
 
 
-    for _, dow, start, stop, title, style in sorted(content):
-        calendar.add_event(
-            day_of_week=dow,
-            start=start, 
-            end=stop, 
-            title=title, 
-            style=style
-        )
+def docente_view(sdf: pd.DataFrame, options: list[Any], schedule_by_name: dict[str, Schedule], calendar_buffer: io.BytesIO):
+    selected_name = st.selectbox(
+        f'Docente ({len(options)})',
+        options=options, 
+        index=0
+    )
 
-    # Save the resulting schedule to an image file
-    calendar.save(calendar_buffer)
+    filtered_df = sdf[sdf[COL_NOMBRE] == selected_name]
+    
+    if selected_name in schedule_by_name:
+        sch = schedule_by_name[selected_name]
+    else:
+        schedule_by_name[selected_name] = sch = build_schedule(filtered_df)
 
+    elements = st.container()
+
+    generate_schedule_image(sch, calendar_buffer)
+    with elements:
+        st.image(calendar_buffer)        
+        st.dataframe(filtered_df, height=300, hide_index=True, use_container_width=True)
+    return elements
 
 def main():
-    df = None
+    calendar_buffer = io.BytesIO()
 
+    if "df" in st.session_state:
+        df = st.session_state.df
+        schedule_by_name = st.session_state.schedule_by_name
+    else:
+        df = None
+        schedule_by_name: dict[str, Schedule] = {}
+    
     with st.sidebar:
+        col1, col2, col3 = st.columns(3)
 
-        uploaded_file = st.file_uploader("Elegí un archivo")
-        if uploaded_file is not None:
-            df = read(
-                    uploaded_file,
-                    required_columns=("Nombre", ),
-                    ffill_columns=("Carrera", "Asignatura", "Año", "Turno", "Com"),
-                )
+        with col1:
+            if st.button("Via Archivo 📎"):
+                upload_file_dialog()
+        
+        with col2:
+            if st.button("Via Link 🔗"):
+                download_from_sharepoint_dialog()
+
+        with col3:          
+            if df is not None:
+                url = st.session_state.df.attrs.get("url")
+                if url:
+                    if st.button("↻"):
+                        download(url)
+                    
 
         if df is not None:
             st.header(f"Datos")
             st.markdown(f"**Actualización**: {df.attrs["import_datetime"]}")
             st.markdown(f"**Filas**: {len(df)}")
                     
-            api_options = ("Importar", "Por docente", )
+            api_options = ("Importar", "Por docente", "Con hora libre")
             selected_api = st.selectbox(
                 label="Visualización:",
                 options=api_options,
@@ -261,22 +308,47 @@ def main():
                 st.text(k)
 
         if selected_api == "Por docente":
-            nombres = set(df["Nombre"])
-            if "" in nombres:
-                nombres.remove("")
-            options = sorted(nombres)
-            selected_team = st.selectbox('Docente', options=options, index=0)
-            filtered_df = df[df["Nombre"] == selected_team]
+            dview = docente_view(
+                df,
+                sorted({name for name in df[COL_NOMBRE] if name}),
+                schedule_by_name,
+                calendar_buffer
+            ) 
 
-            build_schedule(filtered_df)
-            st.image(calendar_buffer)
+        if selected_api == "Con hora libre":
+            col1, col2, col3= st.columns(3)
+            _, _, col5= st.columns(3)
+            with col5:
+                present = st.checkbox("Sólo día presentes")
+            with col1:
+                day = st.selectbox("Dia", tuple(DOW_2_NUM.keys()))
+            with col2:
+                start = st.number_input("Desde", 0, 24, 9)
+            with col3:
+                stop = st.number_input("Hasta", 0, 24, 10)
+
+            options = []
+            for selected_name, gdf in df.groupby(COL_NOMBRE):
+                if selected_name == "":
+                    continue
+                if selected_name in schedule_by_name:
+                    sch = schedule_by_name[selected_name]
+                else:
+                    schedule_by_name[selected_name] = sch = build_schedule(gdf)
+                if sch.is_busy(DOW_2_NUM[day], start, stop):
+                    continue
+                if present and not sch[DOW_2_NUM[day]]:
+                    continue
+                options.append(selected_name)
+
+            st.divider()
             
-            st.dataframe(filtered_df, height=300, hide_index=True, use_container_width=True)
-            
-
-
-
-
+            dview = docente_view(
+                df,
+                options,
+                schedule_by_name,
+                calendar_buffer
+            ) 
 
 
 if __name__ == "__main__":
