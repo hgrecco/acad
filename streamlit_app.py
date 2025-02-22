@@ -3,21 +3,116 @@ import io
 import datetime
 import pandas as pd
 import pytz
+from typing import Any, Literal, NamedTuple
+import requests
 
 from calendar_view.calendar import Calendar
 from calendar_view.core.event import Event, EventStyles
 from calendar_view.core import data
 
-calendar_buffer = io.BytesIO()
+from functools import cache
 
-DOW_2_NUM = {
+type DOW = Literal[0, 1, 2, 3, 4, 5, 6]
+
+DOW_2_NUM: dict[str, DOW]= {
     "Lunes": 0,
     "Martes": 1,
     "Miércoles": 2,
     "Jueves": 3,
     "Viernes": 4,
     "Sábado": 5,
+    "Domingo": 6,
 }
+
+COL_NOMBRE = "Nombre"
+
+@cache
+def time_str_to_float(s: str) -> float:
+    if ":" in s:
+        h, m = s.split(":")
+        return float(h) + float(m) / 60
+    return float(s)
+
+
+class ScheduleEvent(NamedTuple):
+    start_str: str
+    stop_str: str
+    title: str
+    tag: int
+
+    @property
+    def start(self) -> float:
+        return time_str_to_float(self.start_str)
+
+    @property
+    def stop(self) -> float:
+        return time_str_to_float(self.stop_str)
+
+    @property
+    def duration(self) -> float:
+        return self.stop - self.start
+
+
+class Schedule(dict[DOW, list[ScheduleEvent]]):
+
+    def __missing__(self, key: DOW) -> list[ScheduleEvent]:
+        self[key] = value = list()
+        return value
+
+    def add_event(self, dow: DOW, start_str: str, stop_str: str, title: str, *, tag: int=0):
+        self[dow].append(ScheduleEvent(start_str, stop_str, title, tag))
+
+    def hours(self, dow: DOW) -> float:
+        return sum((ev.duration for ev in self[dow]))
+    
+    def is_busy(self, dow: DOW, start: float, stop: float) -> bool:
+        for ev in self[dow]:
+            if ev.start < start < ev.stop:
+                return True
+            if ev.start < stop < ev.stop:
+                return True
+            if start < ev.start and ev.stop < stop:
+                return True
+
+        return False
+    
+
+def parse(s):
+    if pd.isna(s):
+        return
+    try:
+        dow, chk1, start, chk2, stop, chk3 = s.strip().split(" ")
+    except:
+        raise
+    assert chk1 == "de"
+    assert chk2 == "a"
+    assert chk3 == "h"
+    return (dow, start.replace(".", ":"), stop.replace(".", ":"))
+
+
+def build_schedule(sdf: pd.DataFrame) -> Schedule:
+
+    sch = Schedule()
+
+    for _, row in sdf.iterrows():
+
+        title = f"{row['Confirmación docente']} | {row['Facultad']}, {row["Carrera"]}, {row["Asignatura"]}. {int(row["Año"])}.{row["Turno"]}.{row["Com"]} "
+
+        try:
+            dow, start, stop = parse(row["Horarios"])
+            dow = DOW_2_NUM[dow]
+            tag = 1
+        except Exception as ex:
+            title += f" ({row['Horarios']}) {ex}"
+            dow = 6
+            start = "8:00"
+            stop = "9:00"
+            tag = 2
+        
+        sch.add_event(dow, start, stop, title, tag=tag)
+    
+    return sch
+
 
 def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple[str] = tuple()):
     out = []
@@ -54,8 +149,8 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
 
                 for col in ffill_columns:
                     df[col] = df[col].ffill()
-                print(df.columns)
-                df["Nombre"] = df["Nombre"].fillna("")
+                
+                df[COL_NOMBRE] = df[COL_NOMBRE].fillna("")
                 df.insert(0, "Facultad", sheet_name)
                 import_log.append(
                             f"{sheet_name} | Se importaron {len(df)} filas"
