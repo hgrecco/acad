@@ -29,13 +29,17 @@ def create_zip_in_memory(files: dict[str, bytes]) -> bytes:
 
 
 @st.cache_data
-def convert_df(sdf: pd.DataFrame) -> bytes:
+def converte_dfs_to_excel(sdf: dict[str, pd.DataFrame]) -> bytes:
     cnt = defaultdict(int)
     files: dict[str, bytes] = {}
 
     records = []
 
-    for nombre, gdf in sdf.groupby(COL_NOMBRE):
+    nombres = set()
+    for sheet_df in sdf.values():
+        nombres.update(sheet_df[COL_NOMBRE].unique())
+
+    for nombre in sorted(nombres):
         stem = safe_filename(nombre)
 
         if stem in cnt:
@@ -53,7 +57,9 @@ def convert_df(sdf: pd.DataFrame) -> bytes:
 
         buff = io.BytesIO()
         with pd.ExcelWriter(buff, engine="openpyxl") as writer:
-            gdf.to_excel(writer, sheet_name="cursos", index=False)
+            for sheet_name, sheet_df in sdf.items()
+                sheet_df[sheet_df[COL_NOMBRE == nombre]].to_excel(writer, sheet_name=sheet_name, index=False)
+            
         buff.seek(0)
 
         files[fn] = buff.getvalue()
@@ -80,18 +86,37 @@ EXPORT_COLUMNS = [
 
 data_to_download = None
 with st.form("my_form"):
-    include_status = st.multiselect(
+
+    options = set(df[COL_STATUS].unique())
+    options.add("X")
+    options.add("XP")
+    options.add("LICENCIA")
+
+    sheet_name_1 = st.text_input("Nombre la hoja", "Cargos activos")
+    include_status_1 = st.multiselect(
         "Incluir asignaciones con",
-        sorted(df[COL_STATUS].unique()),
+        options,
         ["X", "XP"],
     )
 
+    sheet_name_2 = st.text_input("Nombre la hoja", "Cargos en licencia")
+    include_status_2 = st.multiselect(
+        "Incluir asignaciones con",
+        options,
+        ["LICENCIA", ],
+    )
 
     # Every form must have a submit button.
     submitted = st.form_submit_button("Generar archivos")
-    sdf = df[df[COL_STATUS].isin(include_status)]
     if submitted:
-        data_to_download = convert_df(sdf[EXPORT_COLUMNS])
+        sdf1 = df[df[COL_STATUS].isin(include_status_1)]
+        sdf2 = df[df[COL_STATUS].isin(include_status_2)]
+        data_to_download = converte_dfs_to_excel(
+            {
+                sheet_name_1: sdf1[EXPORT_COLUMNS], 
+                sheet_name_2: sdf2[EXPORT_COLUMNS],
+            }
+        )
 
 if data_to_download is not None:
     st.download_button(
