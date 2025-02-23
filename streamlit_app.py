@@ -32,7 +32,6 @@ def download_from_sharepoint_dialog():
                 download(url)
                 st.switch_page("page_start.py")
             except Exception as ex:
-                err = str(ex).replace("File is not a zip file", "Formato desconocido")
                 st.error(f"No se pudo obtener los datos: {ex}")
 
 @st.dialog("(Re)Importar desde la web")

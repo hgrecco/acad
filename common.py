@@ -246,12 +246,17 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
 
 
 def read_into_session(content, **attrs: str):
+    try:
+        df = read(
+                    content,
+                    required_columns=REQUIRED_COLS,
+                    ffill_columns=(COL_CARRERA, COL_ASIGNATURA, COL_YEAR, COL_TURNO, COL_COMISION),
+                )
+    except Exception as ex:
+        err = str(ex).replace("File is not a zip file", "Formato desconocido")    
+        raise Exception(err)
+    
     st.cache_data.clear()
-    df = read(
-                content,
-                required_columns=REQUIRED_COLS,
-                ffill_columns=(COL_CARRERA, COL_ASIGNATURA, COL_YEAR, COL_TURNO, COL_COMISION),
-            )
     
     for k, v in attrs.items():
         df.attrs[k] = v
