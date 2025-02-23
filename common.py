@@ -245,7 +245,7 @@ def download(url: str):
         if response.status_code != 200:
             st.error(f"No se pudo bajar el archivo (status code {response.status_code})")
         else:
-            read_into_session(response.content, url=url)  
+            read_into_session(io.BytesIO(response.content), url=url)  
 
 def generate_schedule_image(sch: Schedule, buffer: io.BytesIO):
     config = data.CalendarConfig(
