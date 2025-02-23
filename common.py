@@ -33,10 +33,10 @@ EVENT_TAG_VACANT = 3
 EVENT_TAG_LICENSE = 4
 
 TAG_TO_STYLE = {
-    1: GREEN, 
-    2: RED,
-    3: BLUE
-    4: GRAY
+    1: EventStyles.GREEN, 
+    2: EventStyles.RED,
+    3: EventStyles.BLUE,
+    4: EventStyles.GRAY,
 }
 
 
