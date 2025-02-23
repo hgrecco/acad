@@ -1,6 +1,16 @@
+import datetime
 import streamlit as st
+import pandas as pd
 
-from common import DOW_2_NUM, COL_NOMBRE, person_view, build_schedule, CALENDAR_BUFFER
+from common import DOW_2_NUM, COL_NOMBRE, person_view, build_schedule, CALENDAR_BUFFER, COL_STATUS, com_string, parse_into_event, ScheduleEvent
+
+@st.cache_data
+def get_vacant_options(sdf: pd.DataFrame) -> dict[str, tuple[int, ScheduleEvent]]:
+    return dict(sorted(
+        { com_string(row): parse_into_event(row)
+          for _, row in sdf[sdf[COL_STATUS] == "VACANTE"].iterrows()
+        }.items()
+    ))
 
 
 if "df" not in st.session_state:
@@ -10,16 +20,41 @@ if "df" not in st.session_state:
 df = st.session_state.df
 schedule_by_name = st.session_state.schedule_by_name
 
+elements = st.container()
+
+picker = st.empty()
+
+st.caption("o elegila arbitrariamente")
 col1, col2, col3= st.columns(3)
 _, _, col5= st.columns(3)
 with col5:
     present = st.checkbox("Sólo días con horas")
 with col1:
-    day = st.selectbox("Dia", tuple(DOW_2_NUM.keys()))
+    day = st.selectbox("Dia", tuple(DOW_2_NUM.keys()), key="page_search_slot_day")
 with col2:
-    start = st.number_input("Desde", 0, 24, 9)
+    start = st.time_input("Desde", key="page_search_slot_start")
 with col3:
-    stop = st.number_input("Hasta", 0, 24, 10)
+    stop = st.time_input("Hasta", key="page_search_slot_stop")
+
+picker_options = get_vacant_options(df)
+
+def _update():
+    value = st.session_state.page_search_slot_picker
+    dow, sch_ev= picker_options[value]
+    for k, v in DOW_2_NUM.items():
+        if dow == v:
+            st.session_state.page_search_slot_day = k
+            break
+    st.session_state.page_search_slot_start = sch_ev.start
+    st.session_state.page_search_slot_stop = sch_ev.stop
+
+
+picker.selectbox(
+    "Elegí la franja horaria de un curso vacante",
+    options=list(picker_options.keys()),
+    on_change=_update,
+    key="page_search_slot_picker",
+)
 
 options = []
 for selected_name, gdf in df.groupby(COL_NOMBRE):

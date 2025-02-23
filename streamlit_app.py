@@ -22,9 +22,18 @@ def download_from_sharepoint_dialog():
 
     url = st.text_input("Link al archivo", value=default)
     if st.button("Obtener datos", icon=":material/cloud_download:"):
-        download(url)
-        st.switch_page("page_start.py")
-
+        url = url.strip()
+        if url == "":
+            st.error("El link no puede estar vacio.")
+        elif not url.startswith("http"):
+            st.error("El link es inválido.")            
+        else:
+            try:
+                download(url)
+                st.switch_page("page_start.py")
+            except Exception as ex:
+                err = str(ex).replace("File is not a zip file", "Formato desconocido")
+                st.error(f"No se pudo obtener los datos: {ex}")
 
 @st.dialog("(Re)Importar desde la web")
 def redownload_from_sharepoint_dialog():

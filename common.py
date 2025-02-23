@@ -3,7 +3,7 @@ import io
 import datetime
 import pandas as pd
 import pytz
-from typing import Any, Literal, NamedTuple
+from typing import Any, Literal, Mapping, NamedTuple
 import requests
 from collections import defaultdict
 
@@ -61,43 +61,51 @@ REQUIRED_COLS = [
 CALENDAR_BUFFER = io.BytesIO()
 
 @cache
-def time_str_to_float(s: str) -> float:
-    if ":" in s:
-        h, m = s.split(":")
-        return float(h) + float(m) / 60
-    return float(s)
+def parse_time(s: str) -> datetime.time:
+    if ":" not in s:
+        return datetime.time(int(s.strip()))
+    h, m = s.split(":")
+    return datetime.time(int(h.strip()), int(m.strip()))
+    
 
 
 class ScheduleEvent(NamedTuple):
-    start_str: str
-    stop_str: str
+    start: datetime.time
+    stop: datetime.time
     title: str
     tag: int
 
     @property
-    def start(self) -> float:
-        return time_str_to_float(self.start_str)
-
-    @property
-    def stop(self) -> float:
-        return time_str_to_float(self.stop_str)
-
-    @property
     def duration(self) -> float:
-        return self.stop - self.start
+        dt1 = datetime.datetime.combine(datetime.datetime.min, self.start)
+        dt2 = datetime.datetime.combine(datetime.datetime.min, self.stop)
+        
+        # Compute the difference in seconds
+        diff_seconds = (dt2 - dt1).total_seconds()
+        
+        # Convert seconds to hours
+        diff_hours = diff_seconds / 3600  
+        return diff_hours
 
 
 class Schedule(defaultdict[DOW, list[ScheduleEvent]]):
     def __init__(self):
         super().__init__(list)
 
-    def add_event(self, dow: DOW, start_str: str, stop_str: str, title: str, *, tag: int = 0):
-        self[dow].append(ScheduleEvent(start_str, stop_str, title, tag))
+    def add_event(self, dow: DOW, event: ScheduleEvent):
+        self[dow].append(event)
+
+    def create_and_add_event(self, dow: DOW, start_str: str, stop_str: str, title: str, *, tag: int = 0):
+        self[dow].append(ScheduleEvent(
+            parse_time(start_str), 
+            parse_time(stop_str), 
+            title, tag)
+            )
 
     def hours(self, dow: DOW) -> float:
         return sum(ev.duration for ev in self[dow])
 
-    def is_busy(self, dow: DOW, start: float, stop: float) -> bool:
+    def is_busy(self, dow: DOW, start: datetime.time, stop: datetime.time) -> bool:
         return any(not (ev.stop <= start or ev.start >= stop) for ev in self[dow])
     
 
@@ -115,33 +123,45 @@ def parse(s):
     return dow, start.replace(".", ":"), stop.replace(".", ":")
 
 
+def parse_into_event(row: Mapping[str, Any], *, title_prefix: str = "") -> tuple[int, ScheduleEvent]:
+    title = title_prefix + com_string(row)
+
+    try:
+        dow, start_str, stop_str = parse(row["Horarios"])
+        dow = DOW_2_NUM[dow]
+        if row[COL_STATUS] in ("X", "XP"):
+            tag = EVENT_TAG_OK
+        elif row[COL_STATUS] in ("LICENCIA"):
+            tag = EVENT_TAG_LICENSE
+        elif row[COL_STATUS] in ("VACANTE"):
+            tag = EVENT_TAG_VACANT
+        else:
+            tag = EVENT_TAG_ERROR
+        start = parse_time(start_str)
+        stop = parse_time(stop_str)
+    except Exception as ex:
+        title += f" ({row['Horarios']}) {ex}"
+        dow = 6
+        start = datetime.time(8)
+        stop = datetime.time(9)
+        tag = EVENT_TAG_ERROR    
+
+    return dow, ScheduleEvent(start, stop, title, tag)
+
+
+def com_string(row: Mapping[Any, Any]) -> str:
+    return f"{row[COL_FACULTAD]}, {row[COL_CARRERA]}, {row[COL_ASIGNATURA]} - {row[DERIVED_COL_YEAR_TURNO_COM]}"
+
+
 def build_schedule(sdf: pd.DataFrame) -> Schedule:
 
     sch = Schedule()
 
     for _, row in sdf.iterrows():
 
-        title = f"{row[COL_STATUS]} | {row[COL_FACULTAD]}, {row[COL_CARRERA]}, {row[DERIVED_COL_YEAR_TURNO_COM]} "
+        dow, event = parse_into_event(row, title_prefix=f"{row[COL_STATUS]} | ")
 
-        try:
-            dow, start, stop = parse(row["Horarios"])
-            dow = DOW_2_NUM[dow]
-            if row[COL_STATUS] in ("X", "XP"):
-                tag = EVENT_TAG_OK
-            elif row[COL_STATUS] in ("LICENCIA"):
-                tag = EVENT_TAG_LICENSE
-            elif row[COL_STATUS] in ("VACANTE"):
-                tag = EVENT_TAG_VACANT
-            else:
-                tag = EVENT_TAG_ERROR
-        except Exception as ex:
-            title += f" ({row['Horarios']}) {ex}"
-            dow = 6
-            start = "8:00"
-            stop = "9:00"
-            tag = EVENT_TAG_ERROR
-        
-        sch.add_event(dow, start, stop, title, tag=tag)
+        sch.add_event(dow, event)
     
     return sch
 
@@ -265,8 +285,8 @@ def generate_schedule_image(sch: Schedule, buffer: io.BytesIO):
         for ev in events:
             calendar.add_event(
                 day_of_week=dow,
-                start=ev.start_str, 
-                end=ev.stop_str, 
+                start=ev.start.strftime("%H:%M"), 
+                end=ev.stop.strftime("%H:%M"), 
                 title=ev.title, 
                 style=TAG_TO_STYLE[ev.tag]
             )
