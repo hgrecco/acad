@@ -81,4 +81,16 @@ if __name__ == "__main__":
         page_title="Asistencia académica", page_icon="🎓",
         layout="wide",
     )
+
+    st.markdown(
+        """
+        <style>
+        div.stToolbarActions {
+            visibility: hidden;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
     main()
