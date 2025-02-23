@@ -27,6 +27,19 @@ DOW_2_NUM: dict[str, DOW]= {
     "Domingo": 6,
 }
 
+EVENT_TAG_OK = 1
+EVENT_TAG_ERROR = 2
+EVENT_TAG_VACANT = 3
+EVENT_TAG_LICENSE = 4
+
+TAG_TO_STYLE = {
+    1: GREEN, 
+    2: RED,
+    3: BLUE
+    4: GRAY
+}
+
+
 COL_FACULTAD = "Facultad"
 COL_CARRERA = "Carrera"
 COL_ASIGNATURA = "Asignatura"
@@ -113,13 +126,20 @@ def build_schedule(sdf: pd.DataFrame) -> Schedule:
         try:
             dow, start, stop = parse(row["Horarios"])
             dow = DOW_2_NUM[dow]
-            tag = 1
+            if row[COL_STATUS] in ("X", "XP"):
+                tag = EVENT_TAG_OK
+            elif row[COL_STATUS] in ("LICENCIA"):
+                tag = EVENT_TAG_LICENSE
+            elif row[COL_STATUS] in ("VACANTE"):
+                tag = EVENT_TAG_VACANT
+            else:
+                tag = EVENT_TAG_ERROR
         except Exception as ex:
             title += f" ({row['Horarios']}) {ex}"
             dow = 6
             start = "8:00"
             stop = "9:00"
-            tag = 2
+            tag = EVENT_TAG_ERROR
         
         sch.add_event(dow, start, stop, title, tag=tag)
     
@@ -248,7 +268,7 @@ def generate_schedule_image(sch: Schedule, buffer: io.BytesIO):
                 start=ev.start_str, 
                 end=ev.stop_str, 
                 title=ev.title, 
-                style=EventStyles.RED if ev.tag == 2 else EventStyles.GREEN
+                style=TAG_TO_STYLE[ev.tag]
             )
 
     calendar.save(buffer)
