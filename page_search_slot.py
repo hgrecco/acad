@@ -30,22 +30,6 @@ if "df" not in st.session_state:
 df = st.session_state.df
 schedule_by_name = st.session_state.schedule_by_name
 
-elements = st.container()
-
-picker = st.empty()
-
-st.caption("o elegila arbitrariamente")
-col1, col2, col3= st.columns(3)
-_, _, col5= st.columns(3)
-with col5:
-    present = st.checkbox("Sólo días con horas")
-with col1:
-    day = st.selectbox("Dia", tuple(DOW_2_NUM.keys()), key="page_search_slot_day")
-with col2:
-    start = st.time_input("Desde", key="page_search_slot_start")
-with col3:
-    stop = st.time_input("Hasta", key="page_search_slot_stop")
-
 picker_options = get_vacant_options(df)
 
 def _update():
@@ -58,13 +42,24 @@ def _update():
     st.session_state.page_search_slot_start = sch_ev.start
     st.session_state.page_search_slot_stop = sch_ev.stop
 
-
-picker.selectbox(
+picker = st.selectbox(
     "Elegí la franja horaria de un curso vacante",
     options=list(picker_options.keys()),
     on_change=_update,
     key="page_search_slot_picker",
 )
+
+st.caption("o elegila arbitrariamente")
+col1, col2, col3= st.columns(3)
+_, _, col5= st.columns(3)
+with col5:
+    present = st.checkbox("Sólo días con horas")
+with col1:
+    day = st.selectbox("Dia", tuple(DOW_2_NUM.keys()), key="page_search_slot_day")
+with col2:
+    start = st.time_input("Desde", key="page_search_slot_start")
+with col3:
+    stop = st.time_input("Hasta", key="page_search_slot_stop")
 
 AREAS_2_PERSONAS = get_areas(df.attrs["personas"])
 if df.attrs["personas"]:
