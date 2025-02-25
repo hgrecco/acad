@@ -1,3 +1,4 @@
+from collections import defaultdict
 import streamlit as st
 import pandas as pd
 
@@ -10,6 +11,16 @@ def get_vacant_options(sdf: pd.DataFrame) -> dict[str, tuple[int, ScheduleEvent]
           for _, row in sdf[sdf[COL_STATUS] == "VACANTE"].iterrows()
         }.items()
     ))
+
+
+@st.cache_data
+def get_areas(d: dict[str, tuple[str, str]]) -> dict[str, list[str]]:
+    out = defaultdict(list)
+
+    for k, v in d.items():
+        out[v[0]].append(k)
+
+    return out
 
 
 if "df" not in st.session_state:
@@ -55,8 +66,22 @@ picker.selectbox(
     key="page_search_slot_picker",
 )
 
+AREAS_2_PERSONAS = get_areas(df.attrs["personas"])
+if df.attrs["personas"]:
+    areas = st.multiselect(
+        "Areas", 
+        options=sorted(AREAS_2_PERSONAS.keys()), 
+        default=sorted(AREAS_2_PERSONAS.keys()),
+    )
+    if areas:
+        sel = df[COL_NOMBRE].isin(sum((AREAS_2_PERSONAS[k] for k in areas), start=[]))
+    else:
+        sel = slice(-1)
+else:
+    sel =  slice(-1)
+
 options = []
-for selected_name, gdf in df.groupby(COL_NOMBRE):
+for selected_name, gdf in df[sel].groupby(COL_NOMBRE):
     if selected_name == "":
         continue
     if selected_name in schedule_by_name:
