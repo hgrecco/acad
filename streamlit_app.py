@@ -69,6 +69,7 @@ def main():
             "Reporte 📄": [
                 st.Page("page_report_import.py", title="de importación"),
                 st.Page("page_report_time.py", title="de errores de horario"),
+                st.Page("page_report_names.py", title="de mail definido"),
                 st.Page("page_report_personal_file.py", title="de horarios por persona", icon=":material/download:"),
             ],
             "Buscar 🔎": [
