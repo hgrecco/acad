@@ -50,7 +50,10 @@ MULTICOL_COMISION = [COL_FACULTAD, COL_CARRERA] + [COL_ASIGNATURA, COL_YEAR, COL
 COL_NOMBRE = "Nombre"
 COL_HORARIOS = "Horarios"
 COL_STATUS = "Estado"
-DERIVED_COL_YEAR_TURNO_COM = "Año_Turno_Com"
+DERIVED_COL_YEAR_TURNO_COM = "_Año_Turno_Com"
+
+COL_AREA = "Area"
+COL_EMAIL = "email"
 
 # COL_FACULTAD is added later 
 REQUIRED_COLS = [
@@ -322,5 +325,9 @@ def person_view(sdf: pd.DataFrame, options: list[Any], schedule_by_name: dict[st
     generate_schedule_image(sch, calendar_buffer)
     with elements:
         st.image(calendar_buffer)        
-        st.dataframe(filtered_df, height=300, hide_index=True, use_container_width=True)
+        st.dataframe(
+            filtered_df, height=300, hide_index=True, 
+            use_container_width=True,
+            column_config={col: None for col in sdf.columns if col.startswith("_")}
+        )
     return elements
