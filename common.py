@@ -173,9 +173,26 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
     out = []
     columns = None
     import_log = []
+    personas = {}
     with pd.ExcelFile(p, engine="openpyxl") as fi:
         for sheet_name in sorted(fi.sheet_names):
-            if sheet_name.startswith("_"):
+            
+            if sheet_name == "_Personas":
+                df = fi.parse(sheet_name=sheet_name)
+                for col in (COL_NOMBRE, COL_AREA, COL_EMAIL):
+                    if col not in df.columns:
+                        import_log.append(
+                            f"{sheet_name} | No tiene la columna requerida: `{col}"
+                        )
+                        break
+                else:
+                    personas = {
+                        row[COL_NOMBRE]: (row[COL_AREA], row[COL_EMAIL])
+                        for _, row in df.iterrows()
+                    }
+                    continue
+
+            elif sheet_name.startswith("_"):
                 import_log.append(
                     f"{sheet_name} | Salteando {sheet_name} porque el nombre inicia con _"
                 )
@@ -244,6 +261,7 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
     outdf = pd.concat(out)
     outdf.attrs["import_log"] = import_log
     outdf.attrs["import_datetime"] = datetime.datetime.now(pytz.timezone("America/Argentina/Buenos_Aires")).strftime("%Y-%m-%d %H:%M:%S")
+    outdf.attrs["personas"] = personas
     return outdf
 
 
