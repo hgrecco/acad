@@ -29,14 +29,14 @@ def create_zip_in_memory(files: dict[str, bytes]) -> bytes:
 
 
 @st.cache_data
-def converte_dfs_to_excel(sdf: dict[str, pd.DataFrame]) -> bytes:
+def converte_dfs_to_excel(sheet_2_df: dict[str, pd.DataFrame], personas: dict[str, tuple[str, str]] | None = None) -> bytes:
     cnt = defaultdict(int)
     files: dict[str, bytes] = {}
 
     records = []
 
     nombres = set()
-    for sheet_df in sdf.values():
+    for sheet_df in sheet_2_df.values():
         nombres.update(sheet_df[COL_NOMBRE].unique())
 
     for nombre in sorted(nombres):
@@ -49,15 +49,18 @@ def converte_dfs_to_excel(sdf: dict[str, pd.DataFrame]) -> bytes:
 
         cnt[stem] += 1
 
+        if personas:
+            mail = personas.get(nombre, ["", ""])[1]
+
         records.append({
             COL_NOMBRE: nombre,
             "archivo": fn,
-            "mail": "",
+            "mail": mail,
         })
-
+        
         buff = io.BytesIO()
         with pd.ExcelWriter(buff, engine="openpyxl") as writer:
-            for sheet_name, sheet_df in sdf.items():
+            for sheet_name, sheet_df in sheet_2_df.items():
                 sel_sdf = sheet_df[sheet_df[COL_NOMBRE] == nombre]
                 sel_sdf.to_excel(writer, sheet_name=sheet_name, index=False)
 
@@ -116,7 +119,8 @@ with st.form("my_form"):
             {
                 sheet_name_1: sdf1[EXPORT_COLUMNS], 
                 sheet_name_2: sdf2[EXPORT_COLUMNS],
-            }
+            },
+            df.attrs["personas"]
         )
 
 if data_to_download is not None:

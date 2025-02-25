@@ -190,6 +190,9 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
                         row[COL_NOMBRE]: (row[COL_AREA], row[COL_EMAIL])
                         for _, row in df.iterrows()
                     }
+                    import_log.append(
+                        f"_Personas | Se importaron por caso especial {len(df)} filas"
+                    )
                     continue
 
             elif sheet_name.startswith("_"):
@@ -258,6 +261,10 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
     if not out:
         raise Exception("No se encontraron los datos esperados:\n" + "\n-".join(import_log))
 
+    if not personas:
+        import_log.append(
+                f"_Personas | no se encontró esta hoja"
+            )
     outdf = pd.concat(out)
     outdf.attrs["import_log"] = import_log
     outdf.attrs["import_datetime"] = datetime.datetime.now(pytz.timezone("America/Argentina/Buenos_Aires")).strftime("%Y-%m-%d %H:%M:%S")
