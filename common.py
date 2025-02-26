@@ -8,12 +8,15 @@ import requests
 from collections import defaultdict
 
 from calendar_view.calendar import Calendar
-from calendar_view.core.event import EventStyles
+from calendar_view.core.event import EventStyles, Event, style
 from calendar_view.core import data
 
 from functools import cache
 
 type DOW = Literal[0, 1, 2, 3, 4, 5, 6]
+
+# this is necessary to fix a bug in calendar_view
+style.event_radius = 2
 
 version = "2025-02-23"
 
@@ -318,15 +321,22 @@ def generate_schedule_image(sch: Schedule, buffer: io.BytesIO):
 
     calendar = Calendar.build(config)
 
-    for dow, events in sorted(sch.items()):
-        for ev in events:
-            calendar.add_event(
+    events: list[Event] = []
+    for dow, sch_events in sorted(sch.items()):
+        for ev in sch_events:
+            events.append(
+                Event(
                 day_of_week=dow,
                 start=ev.start.strftime("%H:%M"), 
                 end=ev.stop.strftime("%H:%M"), 
                 title=ev.title, 
                 style=TAG_TO_STYLE[ev.tag]
+                )
             )
+
+    data.validate_events(events, config)
+
+    calendar.add_events(events)
 
     calendar.save(buffer)
 
@@ -347,9 +357,18 @@ def person_view(sdf: pd.DataFrame, options: list[Any], schedule_by_name: dict[st
 
     elements = st.container()
 
-    generate_schedule_image(sch, calendar_buffer)
+    try:
+        generate_schedule_image(sch, calendar_buffer)
+        calendar_err = ""
+    except Exception as ex:
+        calendar_err = f"No se pudo generar el horario. Revise que la planilla este correcta.\n{ex}"
+
     with elements:
-        st.image(calendar_buffer)        
+        if calendar_err:
+            st.error(calendar_err)
+        else:
+            st.image(calendar_buffer)        
+    
         st.dataframe(
             filtered_df, height=300, hide_index=True, 
             use_container_width=True,
