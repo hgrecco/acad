@@ -31,7 +31,8 @@ f"""
 - {len(df[COL_FACULTAD].unique())} facultades.
 - {len(df.groupby([COL_FACULTAD, COL_CARRERA]))} carreras.
 - {len(df.groupby(MULTICOL_COMISION))} comisiones.
-- {len(df[COL_NOMBRE].unique())} personas.
+- {len(df[COL_NOMBRE].unique())} personas asignadas.
+- {len(df.attrs["personas"])} personas en la lista de mails.
 
 ---
 
