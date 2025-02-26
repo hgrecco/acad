@@ -355,4 +355,9 @@ def person_view(sdf: pd.DataFrame, options: list[Any], schedule_by_name: dict[st
             use_container_width=True,
             column_config={col: None for col in sdf.columns if col.startswith("_")}
         )
+
+    if st.button("Exportar a Excel"):
+        from export_helper import export_dialog
+        export_dialog(filtered_df)
+
     return elements
