@@ -6,6 +6,7 @@ import io
 from collections import defaultdict
 import zipfile
 
+from export_helper import export_form
 from common import COL_NOMBRE, COL_ASIGNATURA, COL_CARRERA, COL_COMISION, COL_FACULTAD, COL_HORARIOS, COL_TURNO, COL_YEAR, COL_STATUS
 
 
@@ -28,6 +29,16 @@ def create_zip_in_memory(files: dict[str, bytes]) -> bytes:
     return zip_buffer.getvalue()
 
 
+def generate_excel_content(sheetname_2_df: dict[str, pd.DataFrame]) -> bytes:
+    buff = io.BytesIO()
+    with pd.ExcelWriter(buff, engine="openpyxl") as writer:
+        for sheet_name, sheet_df in sheetname_2_df.items():
+            sheet_df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+    buff.seek(0)
+    return buff.getvalue()
+
+
 @st.cache_data
 def converte_dfs_to_excel(sheet_2_df: dict[str, pd.DataFrame], personas: dict[str, tuple[str, str]] | None = None) -> bytes:
     cnt = defaultdict(int)
@@ -39,41 +50,40 @@ def converte_dfs_to_excel(sheet_2_df: dict[str, pd.DataFrame], personas: dict[st
     for sheet_df in sheet_2_df.values():
         nombres.update(sheet_df[COL_NOMBRE].unique())
 
+    filenames = {}
+    mails = {}
     for nombre in sorted(nombres):
         stem = safe_filename(nombre)
-
         if stem in cnt:
             fn = f"{stem}_{cnt[stem]}.xlsx"
         else:
             fn = f"{stem}.xlsx"
 
+        filenames[nombre] = fn
         cnt[stem] += 1
 
         if personas:
-            mail = personas.get(nombre, ["", ""])[1]
+            mails[nombre] = personas.get(nombre, ["", ""])[1]
+        else:
+            mails[nombre] = ""
+
+
+    for nombre in sorted(nombres):
 
         records.append({
             COL_NOMBRE: nombre,
-            "archivo": fn,
-            "mail": mail,
+            "archivo": filenames[nombre],
+            "mail": mails[nombre],
         })
-        
-        buff = io.BytesIO()
-        with pd.ExcelWriter(buff, engine="openpyxl") as writer:
-            for sheet_name, sheet_df in sheet_2_df.items():
-                sel_sdf = sheet_df[sheet_df[COL_NOMBRE] == nombre]
-                sel_sdf.to_excel(writer, sheet_name=sheet_name, index=False)
 
-        buff.seek(0)
+        files[filenames[nombre]] = generate_excel_content({
+            sheet_name: sheet_df[sheet_df[COL_NOMBRE] == nombre]
+            for sheet_name, sheet_df in sheet_2_df.items()
+            })
 
-        files[fn] = buff.getvalue()
-
-    buff = io.BytesIO()
-    with pd.ExcelWriter(buff, engine="openpyxl") as writer:
-        pd.DataFrame.from_records(records).to_excel(writer, sheet_name="listado", index=False)
-    buff.seek(0)
-
-    files["_listado_completo.xlsx"] = buff.getvalue()
+    files["_listado_completo.xlsx"] = generate_excel_content(
+        {"listado": pd.DataFrame.from_records(records)}
+    )
 
     return create_zip_in_memory(files)
 
@@ -84,50 +94,4 @@ if "df" not in st.session_state:
 
 df = st.session_state.df
 
-EXPORT_COLUMNS = [
-    COL_FACULTAD, COL_CARRERA, COL_ASIGNATURA, COL_YEAR, COL_TURNO, COL_COMISION, COL_HORARIOS, COL_NOMBRE
-]
-
-data_to_download = None
-with st.form("my_form"):
-
-    options = set(df[COL_STATUS].unique())
-    options.add("X")
-    options.add("XP")
-    options.add("LICENCIA")
-
-    sheet_name_1 = st.text_input("Nombre la hoja", "Cargos activos")
-    include_status_1 = st.multiselect(
-        "Incluir asignaciones con",
-        options,
-        ["X", "XP"],
-    )
-
-    sheet_name_2 = st.text_input("Nombre la hoja", "Cargos en licencia")
-    include_status_2 = st.multiselect(
-        "Incluir asignaciones con",
-        options,
-        ["LICENCIA", ],
-    )
-
-    # Every form must have a submit button.
-    submitted = st.form_submit_button("Generar archivos")
-    if submitted:
-        sdf1 = df[df[COL_STATUS].isin(include_status_1)]
-        sdf2 = df[df[COL_STATUS].isin(include_status_2)]
-        data_to_download = converte_dfs_to_excel(
-            {
-                sheet_name_1: sdf1[EXPORT_COLUMNS], 
-                sheet_name_2: sdf2[EXPORT_COLUMNS],
-            },
-            df.attrs["personas"]
-        )
-
-if data_to_download is not None:
-    st.download_button(
-        label=f"Bajar asignaciones ({len(data_to_download)//1024} KB)",
-        data=data_to_download,
-        file_name="asignaciones.zip",
-        mime="application/zip",
-        icon=":material/download:"
-    )
+export_form(df)
