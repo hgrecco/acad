@@ -51,9 +51,6 @@ picker = st.selectbox(
 
 st.caption("o elegila arbitrariamente")
 col1, col2, col3= st.columns(3)
-_, _, col5= st.columns(3)
-with col5:
-    present = st.checkbox("Sólo días con horas")
 with col1:
     day = st.selectbox("Dia", tuple(DOW_2_NUM.keys()), key="page_search_slot_day")
 with col2:
@@ -74,6 +71,8 @@ if df.attrs["personas"]:
         sel = slice(-1)
 else:
     sel =  slice(-1)
+
+present = st.checkbox(f"Sólo incluir personas que tengan otras actividades el {day}")
 
 options = []
 for selected_name, gdf in df[sel].groupby(COL_NOMBRE):
