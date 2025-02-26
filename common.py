@@ -18,7 +18,7 @@ type DOW = Literal[0, 1, 2, 3, 4, 5, 6]
 # this is necessary to fix a bug in calendar_view
 style.event_radius = 2
 
-version = "2025-02-23"
+version = "2025-02-25"
 
 DOW_2_NUM: dict[str, DOW]= {
     "Lunes": 0,
