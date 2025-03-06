@@ -7,7 +7,7 @@ import io
 from collections import defaultdict
 import zipfile
 
-from common import COL_NOMBRE, COL_ASIGNATURA, COL_CARRERA, COL_COMISION, COL_FACULTAD, COL_HORARIOS, COL_TURNO, COL_YEAR, COL_STATUS, COL_HORA_VIRTUAL
+from common import COL_NOMBRE, COL_ASIGNATURA, COL_CARRERA, COL_COMISION, COL_FACULTAD, COL_HORARIOS, COL_TURNO, COL_YEAR, COL_STATUS, COL_HORA_VIRTUAL, COL_OBSERVACIONES
 
 class Download(TypedDict):
     data: bytes
@@ -104,7 +104,7 @@ def converte_dfs_to_excel(sheet_2_df: dict[str, pd.DataFrame], personas: dict[st
 
 def export_form(sdf: pd.DataFrame):
     EXPORT_COLUMNS = [
-        COL_FACULTAD, COL_CARRERA, COL_ASIGNATURA, COL_YEAR, COL_TURNO, COL_COMISION, COL_HORARIOS, COL_HORA_VIRTUAL, COL_NOMBRE
+        COL_FACULTAD, COL_CARRERA, COL_ASIGNATURA, COL_YEAR, COL_TURNO, COL_COMISION, COL_HORARIOS, COL_HORA_VIRTUAL, COL_OBSERVACIONES, COL_NOMBRE
     ]
 
     data_to_download = None
