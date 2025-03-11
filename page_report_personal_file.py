@@ -1,42 +1,10 @@
-import unicodedata
+
 import streamlit as st
 import pandas as pd
-import re
-import io
 from collections import defaultdict
-import zipfile
 
-from export_helper import export_form
-from common import COL_NOMBRE, COL_ASIGNATURA, COL_CARRERA, COL_COMISION, COL_FACULTAD, COL_HORARIOS, COL_TURNO, COL_YEAR, COL_STATUS
-
-
-def safe_filename(s: str) -> str:
-    """Removes all non-ASCII letters and returns a safe string."""
-    # Normalize the string
-    n= unicodedata.normalize('NFKD', s)  
-    s = ''.join([c for c in n if not unicodedata.combining(c)]) 
-    return re.sub(r'[^a-zA-Z]', '_', s.replace(" ", ""))
-
-def create_zip_in_memory(files: dict[str, bytes]) -> bytes:
-    """Creates a ZIP file in memory and returns bytes."""
-    zip_buffer = io.BytesIO()
-    
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for filename, file_content in files.items():
-            zipf.writestr(filename, file_content)
-    
-    zip_buffer.seek(0)
-    return zip_buffer.getvalue()
-
-
-def generate_excel_content(sheetname_2_df: dict[str, pd.DataFrame]) -> bytes:
-    buff = io.BytesIO()
-    with pd.ExcelWriter(buff, engine="openpyxl") as writer:
-        for sheet_name, sheet_df in sheetname_2_df.items():
-            sheet_df.to_excel(writer, sheet_name=sheet_name, index=False)
-
-    buff.seek(0)
-    return buff.getvalue()
+from export_helper import export_form, generate_excel_content, create_zip_in_memory, safe_filename
+from common import COL_NOMBRE
 
 
 @st.cache_data
