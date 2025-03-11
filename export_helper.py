@@ -44,11 +44,11 @@ def generate_excel_content(sheetname_2_df: dict[str, pd.DataFrame]) -> bytes:
 
 
 @st.cache_data
-def converte_dfs_to_excel(sheet_2_df: dict[str, pd.DataFrame], personas: dict[str, tuple[str, str]] | None = None) -> Download:
+def converte_dfs_to_excel(sheet_2_df: dict[str, pd.DataFrame], filename_column: str, *, mail_mapping: dict[str, tuple[str, str]] | None = None, zip_stem: str = "archivo") -> Download:
     
     nombres: set[str] = set()
     for sheet_df in sheet_2_df.values():
-        nombres.update(sheet_df[COL_NOMBRE].unique())
+        nombres.update(sheet_df[filename_column].unique())
 
     cnt = defaultdict(int)
     filenames: dict[str, str] = {}
@@ -63,8 +63,8 @@ def converte_dfs_to_excel(sheet_2_df: dict[str, pd.DataFrame], personas: dict[st
         filenames[nombre] = fn
         cnt[stem] += 1
 
-        if personas:
-            mails[nombre] = personas.get(nombre, ["", ""])[1]
+        if mail_mapping:
+            mails[nombre] = mail_mapping.get(nombre, ["", ""])[1]
         else:
             mails[nombre] = ""
 
@@ -75,13 +75,13 @@ def converte_dfs_to_excel(sheet_2_df: dict[str, pd.DataFrame], personas: dict[st
     for nombre in sorted(nombres):
 
         records.append({
-            COL_NOMBRE: nombre,
+            filename_column: nombre,
             "archivo": filenames[nombre],
             "mail": mails[nombre],
         })
 
         files[filenames[nombre]] = generate_excel_content({
-            sheet_name: sheet_df[sheet_df[COL_NOMBRE] == nombre]
+            sheet_name: sheet_df[sheet_df[filename_column] == nombre]
             for sheet_name, sheet_df in sheet_2_df.items()
             })
 
@@ -98,11 +98,13 @@ def converte_dfs_to_excel(sheet_2_df: dict[str, pd.DataFrame], personas: dict[st
         )
         return {
                 "data": create_zip_in_memory(files),
-                "file_name": "asignaciones.zip",
+                "file_name": f"{zip_stem}.zip",
                 "mime": "application/zip",
         }
 
-def export_form(sdf: pd.DataFrame):
+
+
+def export_form(sdf: pd.DataFrame, filename_column: str, filters: list[tuple[str, str, list[str]]] = [], *, zip_stem: str = "archivo", mail_mapping: dict[str, tuple[str, str]] | None = None):
     EXPORT_COLUMNS = [
         COL_FACULTAD, COL_CARRERA, COL_ASIGNATURA, COL_YEAR, COL_TURNO, COL_COMISION, COL_HORARIOS, COL_HORA_VIRTUAL, COL_OBSERVACIONES, COL_NOMBRE
     ]
@@ -110,36 +112,33 @@ def export_form(sdf: pd.DataFrame):
     data_to_download = None
     with st.form("my_form"):
 
-        options = set(sdf[COL_STATUS].unique())
-        options.add("X")
-        options.add("XP")
-        options.add("LICENCIA")
+        sheet_names: list[str] = []
+        includes: list[list[str]] = []
+        for sheet_name, col, defaults in filters:
+            options = set(sdf[col].unique())
+            for default in defaults:
+                options.add(default)
 
-        sheet_name_1 = st.text_input("Nombre la hoja", "Cargos activos")
-        include_status_1 = st.multiselect(
-            "Incluir asignaciones con",
-            options,
-            ["X", "XP"],
-        )
-
-        sheet_name_2 = st.text_input("Nombre la hoja", "Cargos en licencia")
-        include_status_2 = st.multiselect(
-            "Incluir asignaciones con",
-            options,
-            ["LICENCIA", ],
-        )
+            sheet_name_1 = st.text_input("Nombre la hoja", sheet_name)
+            include_status_1 = st.multiselect(
+                f"Incluir asignaciones con {col}",
+                options,
+                defaults,
+            )
+            sheet_names.append(sheet_name_1)
+            includes.append(include_status_1)
 
         # Every form must have a submit button.
         submitted = st.form_submit_button("Generar archivos")
         if submitted:
-            sdf1 = sdf[sdf[COL_STATUS].isin(include_status_1)]
-            sdf2 = sdf[sdf[COL_STATUS].isin(include_status_2)]
             data_to_download = converte_dfs_to_excel(
                 {
-                    sheet_name_1: sdf1[EXPORT_COLUMNS], 
-                    sheet_name_2: sdf2[EXPORT_COLUMNS],
+                    sheet_name_1: sdf[sdf[col].isin(include_status_1)][EXPORT_COLUMNS]
+                    for sheet_name_1, include_status_1, (_, col, _) in zip(sheet_names, includes, filters)
                 },
-                sdf.attrs["personas"]
+                filename_column=filename_column,
+                mail_mapping=mail_mapping,
+                zip_stem=zip_stem,
             )
 
     if data_to_download is not None:
@@ -149,6 +148,26 @@ def export_form(sdf: pd.DataFrame):
             **data_to_download
         )
 
+def persona_export_form(sdf: pd.DataFrame):
+    export_form(
+        sdf, 
+        filename_column=COL_NOMBRE,
+        filters=[("Cargos activos", COL_STATUS, ["X", "XP"]), ("Cargos en licencia", COL_STATUS, ["LICENCIA"])], 
+        mail_mapping=sdf.attrs["personas"],
+        zip_stem="asignaciones"
+        )
+
+
+def school_export_form(sdf: pd.DataFrame):
+    export_form(
+        sdf, 
+        filename_column=COL_FACULTAD,
+        filters=[("Cursos activos", COL_STATUS, ["X", "XP"])], 
+        mail_mapping=None,
+        zip_stem="facultades"
+    )
+
+
 @st.dialog("Exportar a Excel")
 def export_dialog(sdf: pd.DataFrame):
-    export_form(sdf)
+    persona_export_form(sdf)
