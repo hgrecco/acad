@@ -71,6 +71,7 @@ def main():
                 st.Page("page_report_time.py", title="de errores de horario"),
                 st.Page("page_report_names.py", title="de mail definido"),
                 st.Page("page_report_personal_file.py", title="de horarios por persona", icon=":material/download:"),
+                st.Page("page_report_school_file.py", title="de horarios por facultad", icon=":material/download:"),
             ],
             "Buscar 🔎": [
                 st.Page("page_search_person.py", title="persona por nombre"),
