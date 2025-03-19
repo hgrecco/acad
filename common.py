@@ -247,7 +247,7 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
                 df[COL_YEAR] = df[COL_YEAR].astype(int) 
                 df[COL_STATUS] = df[COL_STATUS].astype(str).fillna("").str.strip()
 
-                df[COL_HORA_VIRTUAL] = df[COL_HORA_VIRTUAL].fillna(0).astype(str).str.strip()
+                df[COL_HORA_VIRTUAL] = df[COL_HORA_VIRTUAL].fillna(0).astype(str).str.strip().str.replace("0.0", "0")
                 df[COL_OBSERVACIONES] = df[COL_OBSERVACIONES].fillna("").astype(str).str.strip()
                 
                 for col in [COL_CARRERA, COL_ASIGNATURA, COL_TURNO, COL_COMISION]:
