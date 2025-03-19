@@ -24,6 +24,16 @@ Las hojas cuyo nombre inician con `_` son ignoradas.
 else:
     df = st.session_state.df
 
+    try:
+        url = df.attrs["url"]
+    except Exception:
+        url = ""
+
+    if url.startswith("http"):
+        url = f"[{url}]({url})"
+    elif url:
+        url = f"`{url}`"
+        
     st.markdown(
 f"""
 **Descripción de los datos**
@@ -38,7 +48,7 @@ f"""
 
 **Fuente**
 - Acceso: {df.attrs["import_datetime"]}
-- Origen: `{df.attrs["url"]}`
+- Origen: {url}
 """)
     st.divider()
     st.markdown(f"*version de la aplicación: {version}*")
