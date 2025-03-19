@@ -30,7 +30,7 @@ else:
         url = ""
 
     if url.startswith("http"):
-        url = f"[{url}]({url})"
+        url = f"[web]({url})"
     elif url:
         url = f"`{url}`"
         
