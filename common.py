@@ -209,31 +209,42 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
             
             try:
                 df = fi.parse(sheet_name=sheet_name)
-
-                if df.empty:
-                    import_log.append(
-                        f"{sheet_name} | Error al importar, la hoja está vacía"
-                    )
-                    continue
-
-                for col in tuple(required_columns) + tuple(ffill_columns): 
-                    if col not in df.columns:
-                        import_log.append(
-                            f"{sheet_name} | Error al importar, no se encontró una columna requerida: {col}"
+            except Exception as ex:
+                import_log.append(
+                            f"{sheet_name} | Cannot parse: {ex}"
                         )
-                    continue
+                continue
+                
+            if df.empty:
+                import_log.append(
+                    f"{sheet_name} | Error al importar, la hoja está vacía"
+                )
+                continue    
 
-                if columns is None:
-                    columns = df.columns
+            for col in tuple(required_columns) + tuple(ffill_columns): 
+                if col not in df.columns:
                     import_log.append(
-                        f"{sheet_name} | Definiendo columnas de referencia: {df.columns.to_list()}"
+                        f"{sheet_name} | Error al importar, no se encontró una columna requerida: {col}"
                     )
-                elif all(df.columns != columns):
-                    import_log.append(
-                        f"{sheet_name} | Error al importar, las columnas no coinciden con la referencia: {df.columns.to_list()}"
-                    )
-                    continue
+                continue
 
+            if columns is None:
+                columns = df.columns
+                import_log.append(
+                    f"{sheet_name} | Definiendo columnas de referencia: {df.columns.to_list()}"
+                )
+            elif len(df.columns) != len(columns):
+                import_log.append(
+                    f"{sheet_name} | Error al importar, las columnas no coinciden con la referencia: {df.columns.to_list()}"
+                )
+                continue
+            elif all(df.columns != columns):
+                import_log.append(
+                    f"{sheet_name} | Error al importar, las columnas no coinciden con la referencia: {df.columns.to_list()}"
+                )
+                continue
+
+            try:
                 nan_columns = df.columns[df.isna().all()].tolist()
                 if nan_columns:
                     import_log.append(
