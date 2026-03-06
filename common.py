@@ -275,7 +275,7 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
                     )
                     continue
 
-                df = df.dropna(how='any')
+                df = df.dropna(how='all')
 
                 if len(df) == 0:
                     import_log.append(
