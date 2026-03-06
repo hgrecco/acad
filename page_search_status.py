@@ -12,4 +12,4 @@ df = st.session_state.df
 status = st.selectbox("Estado", sorted(df[COL_STATUS].unique()))
 if status:
     sdf1 = df[df[COL_STATUS] == status]     
-    st.dataframe(sdf1, height=400, hide_index=True, use_container_width=True)
+    st.dataframe(sdf1, height=400, hide_index=True, width='stretch')

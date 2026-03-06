@@ -388,7 +388,7 @@ def person_view(sdf: pd.DataFrame, options: list[Any], schedule_by_name: dict[st
     
         st.dataframe(
             filtered_df, height=300, hide_index=True, 
-            use_container_width=True,
+            width='stretch',
             column_config={col: None for col in sdf.columns if col.startswith("_")}
         )
 

@@ -31,4 +31,4 @@ if com is not None:
     generate_schedule_image(sch, CALENDAR_BUFFER)
 
     st.image(CALENDAR_BUFFER)        
-    st.dataframe(sdf3, height=300, hide_index=True, use_container_width=True)
+    st.dataframe(sdf3, height=300, hide_index=True, width='stretch')
