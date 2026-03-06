@@ -269,9 +269,24 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
 
 
                 df.insert(0, "Facultad", sheet_name)
+                if len(df) == 0:
+                    import_log.append(
+                        f"{sheet_name} | Esta vacio"
+                    )
+                    continue
+
+                df = df.dropna(how='all')
+
+                if len(df) == 0:
+                    import_log.append(
+                        f"{sheet_name} | Todos sus registros eran invalidos"
+                    )
+                    continue
+
                 import_log.append(
                             f"{sheet_name} | Se importaron {len(df)} filas"
                         )
+
                 out.append(df)
             except Exception as ex:
                 import_log.append(
