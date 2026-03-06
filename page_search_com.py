@@ -40,4 +40,7 @@ if com is not None:
     else:
         st.image(CALENDAR_BUFFER)        
 
-    st.dataframe(sdf3, height=300, hide_index=True, width='stretch')
+    try:
+        st.dataframe(sdf3, height=300, hide_index=True, width='stretch')
+    except Exception as ex:
+        st.error(f"No se pudo mostrar la tabla. {ex}")

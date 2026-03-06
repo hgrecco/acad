@@ -401,11 +401,14 @@ def person_view(sdf: pd.DataFrame, options: list[Any], schedule_by_name: dict[st
         else:
             st.image(calendar_buffer)        
     
-        st.dataframe(
-            filtered_df, height=300, hide_index=True, 
-            width='stretch',
-            column_config={col: None for col in sdf.columns if col.startswith("_")}
-        )
+        try:
+            st.dataframe(
+                filtered_df, height=300, hide_index=True, 
+                width='stretch',
+                column_config={col: None for col in sdf.columns if col.startswith("_")}
+            )
+        except Exception as ex:
+            st.error(f"No se pudo mostrar la tabla. {ex}")
 
     if st.button("Exportar a Excel"):
         from export_helper import export_dialog
