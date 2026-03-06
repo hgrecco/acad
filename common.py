@@ -287,6 +287,15 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
                             f"{sheet_name} | Se importaron {len(df)} filas"
                         )
 
+                all_nan_columns_mask = df.isna().all()
+
+                all_nan_column_names = df.columns[all_nan_columns_mask].tolist()
+
+                if len(all_nan_column_names) > 0:
+                    import_log.append(
+                        f"{sheet_name} | Estas columnas no tienen datos {all_nan_column_names}"
+                    )
+
                 out.append(df)
             except Exception as ex:
                 import_log.append(
