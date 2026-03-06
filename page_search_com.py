@@ -28,7 +28,16 @@ else:
 if com is not None:
     sdf3 = sdf2[sdf2[DERIVED_COL_YEAR_TURNO_COM] == com]
     sch = build_schedule(sdf3)
-    generate_schedule_image(sch, CALENDAR_BUFFER)
 
-    st.image(CALENDAR_BUFFER)        
+    try:
+        generate_schedule_image(sch, CALENDAR_BUFFER)
+        calendar_err = ""
+    except Exception as ex:
+        calendar_err = f"No se pudo generar el horario. Revise que la planilla este correcta.\n{ex}"
+
+    if calendar_err:
+        st.error(calendar_err)
+    else:
+        st.image(CALENDAR_BUFFER)        
+
     st.dataframe(sdf3, height=300, hide_index=True, width='stretch')
