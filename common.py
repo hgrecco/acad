@@ -310,7 +310,7 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
                 f"_Personas | no se encontró esta hoja"
             )
 
-    outdf = pd.concat(out)
+    outdf = pd.concat(out, ignore_index=True)
     outdf.attrs["import_log"] = import_log
     outdf.attrs["import_datetime"] = datetime.datetime.now(pytz.timezone("America/Argentina/Buenos_Aires")).strftime("%Y-%m-%d %H:%M:%S")
     outdf.attrs["personas"] = personas
