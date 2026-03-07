@@ -372,7 +372,7 @@ def generate_schedule_image(sch: Schedule, buffer: io.BytesIO):
     config = data.CalendarConfig(
         lang='es',
         title='Horario',
-        dates='Mo - Su',
+        dates='Lu - Do',
         hours='7 - 23',
         legend=True,
         show_date=False,
