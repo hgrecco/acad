@@ -296,6 +296,14 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
                         f"{sheet_name} | Estas columnas no tienen datos {all_nan_column_names}"
                     )
 
+                non_str_columns = [col for col in df.columns if not isinstance(col, str)]
+                if len(non_str_columns) > 0:
+                    import_log.append(
+                        f"{sheet_name} | Estas columnas no tienen un nombre en formato texto {non_str_columns}"
+                    )
+                    selected_columns = [col for col in df.columns if isinstance(col, str)]
+                    df = df[selected_columns]
+
                 import_log.append(
                     f"{sheet_name} | Columnas a importar {df.columns}"
                 )
