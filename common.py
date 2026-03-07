@@ -311,6 +311,13 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
             )
 
     outdf = pd.concat(out, ignore_index=True)
+
+    for name in outdf.columns:
+        if not isinstance(name, str):
+            import_log.append(
+                f"Concat | Columns {name} is not a str, but {type(name)}"
+            )
+
     outdf.attrs["import_log"] = import_log
     outdf.attrs["import_datetime"] = datetime.datetime.now(pytz.timezone("America/Argentina/Buenos_Aires")).strftime("%Y-%m-%d %H:%M:%S")
     outdf.attrs["personas"] = personas
