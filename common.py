@@ -412,13 +412,17 @@ def person_view(sdf: pd.DataFrame, options: list[Any], schedule_by_name: dict[st
             st.image(calendar_buffer)        
     
         try:
+            column_config = {col: None for col in sdf.columns if col.startswith("_")}
+        except Exception as ex:
+            st.error(f"No se pudo filtrar las columnas: {ex}.\n{sdf.columns}")
+
+        try:
             st.dataframe(
                 filtered_df, height=300, hide_index=True, 
                 width='stretch',
-                column_config={col: None for col in sdf.columns if col.startswith("_")}
+                column_config=column_config
             )
         except Exception as ex:
-            st.info(filtered_df.dtypes)
             st.error(f"No se pudo mostrar la tabla. {ex}")
 
     if st.button("Exportar a Excel"):
