@@ -296,6 +296,10 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
                         f"{sheet_name} | Estas columnas no tienen datos {all_nan_column_names}"
                     )
 
+                import_log.append(
+                    f"{sheet_name} | Columnas a importar {df.columns}"
+                )
+
                 out.append(df)
             except Exception as ex:
                 import_log.append(
@@ -315,7 +319,7 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
     for name in outdf.columns:
         if not isinstance(name, str):
             import_log.append(
-                f"Concat | Columns {name} is not a str, but {type(name)}"
+                f"Concat | La columna {name} no es un string ({type(name)})"
             )
 
     outdf.attrs["import_log"] = import_log
