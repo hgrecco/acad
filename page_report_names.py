@@ -30,7 +30,7 @@ st.dataframe(
     hide_index=True, width='stretch'
 )
 
-st.caption(f":partying_face: Personas presentes en ambos listados (:green[{len(en_ambos)}])")
+st.caption(f":partying: Personas presentes en ambos listados (:green[{len(en_ambos)}])")
 st.dataframe(
     pd.DataFrame.from_records([{COL_NOMBRE: s}for s in sorted(en_ambos) if s.strip()]), 
     hide_index=True, width='stretch'
