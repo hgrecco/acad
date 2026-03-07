@@ -309,7 +309,7 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
         import_log.append(
                 f"_Personas | no se encontró esta hoja"
             )
-    print(out.dtypes)
+
     outdf = pd.concat(out)
     outdf.attrs["import_log"] = import_log
     outdf.attrs["import_datetime"] = datetime.datetime.now(pytz.timezone("America/Argentina/Buenos_Aires")).strftime("%Y-%m-%d %H:%M:%S")
@@ -418,6 +418,7 @@ def person_view(sdf: pd.DataFrame, options: list[Any], schedule_by_name: dict[st
                 column_config={col: None for col in sdf.columns if col.startswith("_")}
             )
         except Exception as ex:
+            st.info(filtered_df.dtypes)
             st.error(f"No se pudo mostrar la tabla. {ex}")
 
     if st.button("Exportar a Excel"):
