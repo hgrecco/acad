@@ -6,7 +6,7 @@ platforms = ["osx-arm64", "linux-64"]
 version = "0.1.0"
 
 [tasks]
-st = "streamlit run streamlit_app.py --client.showErrorDetails=true"
+st = "streamlit run streamlit_app.py" # --client.showErrorDetails=true"
 
 [dependencies]
 pandas = ">=2.2.3,<3"

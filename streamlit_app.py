@@ -85,8 +85,8 @@ def main():
     pg.run()
 
 if __name__ == "__main__":
-    if "df" not in st.session_state:
-        read_into_session("demo.xlsx", url="demo.xlsx")
+    # if "df" not in st.session_state:
+    #     read_into_session("demo.xlsx", url="demo.xlsx")
     st.set_page_config(
         page_title="Asistencia académica", page_icon="🎓",
         layout="wide",
