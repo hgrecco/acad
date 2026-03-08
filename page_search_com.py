@@ -1,6 +1,6 @@
 import streamlit as st
 
-from common import generate_schedule_image, build_schedule, CALENDAR_BUFFER, COL_FACULTAD, COL_ASIGNATURA, DERIVED_COL_YEAR_TURNO_COM
+from common import generate_schedule_image, build_schedule, CALENDAR_BUFFER, COL_FACULTAD, COL_ASIGNATURA, DERIVED_COL_YEAR_TURNO_COM, df_to_records
 
 
 if "df" not in st.session_state:
@@ -41,6 +41,10 @@ if com is not None:
         st.image(CALENDAR_BUFFER)        
 
     try:
-        st.dataframe(sdf3, height=300, hide_index=True, width='stretch')
+        st.dataframe(
+            df_to_records(sdf3), 
+            height=300, width='stretch',
+            hide_index=True
+        )
     except Exception as ex:
         st.error(f"No se pudo mostrar la tabla. {ex}")

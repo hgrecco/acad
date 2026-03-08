@@ -8,9 +8,12 @@ if "df" not in st.session_state:
     st.stop()
 
 df = st.session_state.df
-dview = person_view(
-    df,
-    sorted({name for name in df[COL_NOMBRE] if name}),
-    st.session_state.schedule_by_name,
-    CALENDAR_BUFFER
-) 
+try:
+    dview = person_view(
+        df,
+        sorted({name for name in df[COL_NOMBRE] if name}),
+        st.session_state.schedule_by_name,
+        CALENDAR_BUFFER
+    ) 
+except Exception as ex:
+    st.error(f"No se puedo mostrar la vista: {ex}")

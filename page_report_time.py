@@ -18,7 +18,10 @@ for k, row in df.iterrows():
 
 if records:
     st.caption(f":warning: Se detectaron problemas para interpretar el horario en las siguientes :red[{len(records)}] filas.")
-    st.dataframe(pd.DataFrame.from_records(records)[['Facultad', 'Carrera', 'Asignatura', 'Año', 'Turno', 'Com', 'Nombre', COL_HORARIOS]], 
-                 hide_index=True, width='stretch')
+    st.dataframe(
+        pd.DataFrame.from_records(records)[['Facultad', 'Carrera', 'Asignatura', 'Año', 'Turno', 'Com', 'Nombre', COL_HORARIOS]], 
+        width='stretch'
+        hide_index=True, 
+    )
 else:
     st.caption("No se detectaron problemas para interpretar el horario :partying_face: :tada:")

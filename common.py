@@ -125,7 +125,7 @@ def parse(s):
     try:
         dow, chk1, start, chk2, stop, chk3 = s.strip().split(" ")
     except Exception as ex:
-        raise ValueError(f"Invalid time format: {s}\n{n}")
+        raise ValueError(f"Invalid time format: {s}")
     if chk1 != "de" or chk2 != "a" or chk3 != "h":
         raise ValueError(f"Invalid time format: {s}")
     
@@ -254,12 +254,14 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
                 for col in ffill_columns:
                     df[col] = df[col].ffill()
                 
+                AS_STR_TYPE = str
+
                 df[COL_NOMBRE] = df[COL_NOMBRE].fillna("").str.strip()
                 df[COL_YEAR] = df[COL_YEAR].astype(int) 
-                df[COL_STATUS] = df[COL_STATUS].astype(str).fillna("").str.strip()
+                df[COL_STATUS] = df[COL_STATUS].astype(AS_STR_TYPE).fillna("").str.strip()
 
-                df[COL_HORA_VIRTUAL] = df[COL_HORA_VIRTUAL].fillna(0).astype(str).str.strip().str.replace("0.0", "0")
-                df[COL_OBSERVACIONES] = df[COL_OBSERVACIONES].fillna("").astype(str).str.strip()
+                df[COL_HORA_VIRTUAL] = df[COL_HORA_VIRTUAL].fillna(0).astype(AS_STR_TYPE).str.strip().str.replace("0.0", "0")
+                df[COL_OBSERVACIONES] = df[COL_OBSERVACIONES].fillna("").astype(AS_STR_TYPE).str.strip()
                 
                 for col in [COL_CARRERA, COL_ASIGNATURA, COL_TURNO, COL_COMISION]:
                     df[col] = df[col].str.strip()
@@ -308,6 +310,9 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
                     f"{sheet_name} | Columnas a importar {df.columns}"
                 )
 
+                for col in df.columns[df.isna().all()].tolist():
+                    df[col] = "Sin datos"
+
                 out.append(df)
             except Exception as ex:
                 import_log.append(
@@ -323,6 +328,18 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
             )
 
     outdf = pd.concat(out, ignore_index=True)
+
+    defaults = {
+        "int64": 0,
+        "float64": 0.0,
+        "object": "Sin datos",
+        "bool": False
+    }
+
+    for col in outdf.columns:
+        dtype = str(outdf[col].dtype)
+        if dtype in defaults:
+            outdf[col] = outdf[col].fillna(defaults[dtype])
 
     for name in outdf.columns:
         if not isinstance(name, str):
@@ -437,8 +454,9 @@ def person_view(sdf: pd.DataFrame, options: list[Any], schedule_by_name: dict[st
 
         try:
             st.dataframe(
-                filtered_df, height=300, hide_index=True, 
-                width='stretch',
+                df_to_records(filtered_df),
+                width='stretch', height=300,  
+                hide_index=True,
                 column_config=column_config
             )
         except Exception as ex:
@@ -449,3 +467,9 @@ def person_view(sdf: pd.DataFrame, options: list[Any], schedule_by_name: dict[st
         export_dialog(filtered_df)
 
     return elements
+
+def df_to_records(df: pd.DataFrame) -> list[dict[str, Any]]:
+    return [
+        row.to_dict()
+        for _ndx, row in df.iterrows()
+    ]

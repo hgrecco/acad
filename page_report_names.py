@@ -20,18 +20,21 @@ solo_en_mails = en_mails.difference(en_asignacion)
 st.caption(f":interrobang: Personas presentes solo en las asignaciones (:red[{len(solo_en_asignacion)}])")
 st.dataframe(
     pd.DataFrame.from_records([{COL_NOMBRE: s} for s in sorted(solo_en_asignacion) if s.strip()]), 
-    hide_index=True, width='stretch'
+    width='stretch',
+    hide_index=True, 
 )
 
 
 st.caption(f":warning: Personas presentes solo en la lista de mails (:orange[{len(solo_en_mails)}])")
 st.dataframe(
     pd.DataFrame.from_records([{COL_NOMBRE: s} for s in sorted(solo_en_mails) if s.strip()]), 
-    hide_index=True, width='stretch'
+    width='stretch',
+    hide_index=True, 
 )
 
 st.caption(f":partying: Personas presentes en ambos listados (:green[{len(en_ambos)}])")
 st.dataframe(
     pd.DataFrame.from_records([{COL_NOMBRE: s}for s in sorted(en_ambos) if s.strip()]), 
-    hide_index=True, width='stretch'
+    width='stretch',
+    hide_index=True, 
 )

@@ -17,4 +17,8 @@ for k in df.attrs["import_log"]:
         }
     )
 
-st.dataframe(pd.DataFrame.from_records(records), hide_index=True, width='stretch')
+st.dataframe(
+    pd.DataFrame.from_records(records), 
+    width='stretch',
+    hide_index=True, 
+)
