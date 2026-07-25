@@ -1,8 +1,9 @@
 from collections import defaultdict
 import streamlit as st
 import pandas as pd
+import datetime
 
-from common import DOW_2_NUM, COL_NOMBRE, person_view, build_schedule, CALENDAR_BUFFER, COL_STATUS, com_string, parse_into_event, ScheduleEvent
+from common import DOW_2_NUM, COL_NOMBRE, person_view, build_schedule, CALENDAR_BUFFER, COL_STATUS, com_string, parse_into_event, ScheduleEvent, Schedule, EVENT_TAG_VACANT, COL_FACULTAD
 
 @st.cache_data
 def get_vacant_options(sdf: pd.DataFrame) -> dict[str, tuple[int, ScheduleEvent]]:
@@ -52,11 +53,11 @@ picker = st.selectbox(
 st.caption("o elegila arbitrariamente")
 col1, col2, col3= st.columns(3)
 with col1:
-    day = st.selectbox("Dia", tuple(DOW_2_NUM.keys()), key="page_search_slot_day")
+    day: str = st.selectbox("Dia", tuple(DOW_2_NUM.keys()), key="page_search_slot_day")
 with col2:
-    start = st.time_input("Desde", key="page_search_slot_start")
+    start: datetime.time = st.time_input("Desde", key="page_search_slot_start")
 with col3:
-    stop = st.time_input("Hasta", key="page_search_slot_stop")
+    stop: datetime.time = st.time_input("Hasta", key="page_search_slot_stop")
 
 AREAS_2_PERSONAS = get_areas(df.attrs["personas"])
 if df.attrs["personas"]:
@@ -72,11 +73,21 @@ if df.attrs["personas"]:
 else:
     sel =  slice(-1)
 
-present = st.checkbox(f"Sólo incluir personas que tengan otras actividades el {day}")
+with st.container(border=True):
+    st.text("Sólo incluir personas que tengan otras actividades ")
+    cols = st.columns(3)
+    with cols[0]:
+        present = st.checkbox(f"el {day}")
+    with cols[1]:
+        misma_facultad = st.checkbox(f"en {picker.split(",")[0]}")
+    with cols[2]:
+        misma_franja = st.checkbox("en la misma franja horaria")
 
 options = []
 for selected_name, gdf in df[sel].groupby(COL_NOMBRE):
     if selected_name == "":
+        continue
+    if misma_facultad and not picker.split(",")[0] in gdf[COL_FACULTAD].values:
         continue
     if selected_name in schedule_by_name:
         sch = schedule_by_name[selected_name]
@@ -86,7 +97,23 @@ for selected_name, gdf in df[sel].groupby(COL_NOMBRE):
         continue
     if present and not sch[DOW_2_NUM[day]]:
         continue
+    if misma_franja:
+        if start < datetime.time(13):
+            franja_start, franja_stop = datetime.time(8), datetime.time(13)
+        elif start < datetime.time(18):
+            franja_start, franja_stop = datetime.time(13), datetime.time(18)
+        else:
+            franja_start, franja_stop = datetime.time(18), datetime.time(23)
+        for dow in range(7):
+            if sch.is_busy(dow, franja_start, franja_stop):
+                break
+        else:
+            continue
     options.append(selected_name)
+
+sch = Schedule()
+sch.add_event(DOW_2_NUM[day], ScheduleEvent(start, stop, "Curso a completar", EVENT_TAG_VACANT))
+schedule_by_name["Curso a completar"] = sch
 
 st.divider()
 
@@ -94,5 +121,6 @@ dview = person_view(
     df,
     options,
     schedule_by_name,
-    CALENDAR_BUFFER
+    CALENDAR_BUFFER,
+    sch
 ) 

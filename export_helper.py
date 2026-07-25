@@ -7,7 +7,7 @@ import io
 from collections import defaultdict
 import zipfile
 
-from common import COL_NOMBRE, COL_ASIGNATURA, COL_CARRERA, COL_COMISION, COL_FACULTAD, COL_HORARIOS, COL_TURNO, COL_YEAR, COL_STATUS, COL_HORA_VIRTUAL, COL_OBSERVACIONES
+from common import COL_NOMBRE, COL_ASIGNATURA, COL_CARRERA, COL_COMISION, COL_FACULTAD, COL_HORARIOS, COL_TURNO, COL_YEAR, COL_STATUS, COL_HORA_VIRTUAL, COL_OBSERVACIONES, parse_into_event
 
 class Download(TypedDict):
     data: bytes
@@ -70,21 +70,15 @@ def converte_dfs_to_excel(sheet_2_df: dict[str, pd.DataFrame], filename_column: 
 
 
     files: dict[str, bytes] = {}
-    records = []
 
     for nombre in sorted(nombres):
-
-        records.append({
-            filename_column: nombre,
-            "archivo": filenames[nombre],
-            "mail": mails[nombre],
-        })
 
         files[filenames[nombre]] = generate_excel_content({
             sheet_name: sheet_df[sheet_df[filename_column] == nombre]
             for sheet_name, sheet_df in sheet_2_df.items()
             })
 
+    # Solo exportar el listado completo si hay mas de una persona
     if len(nombres) == 1:
         nombre = nombres.pop()
         return {
@@ -92,15 +86,46 @@ def converte_dfs_to_excel(sheet_2_df: dict[str, pd.DataFrame], filename_column: 
                 "file_name": filenames[nombre],
                 "mime": "application/vnd.ms-excel",
         }
-    else:
-        files["_listado_completo.xlsx"] = generate_excel_content(
-            {"listado": pd.DataFrame.from_records(records)}
-        )
-        return {
-                "data": create_zip_in_memory(files),
-                "file_name": f"{zip_stem}.zip",
-                "mime": "application/zip",
-        }
+
+    user_records = []
+    user_hour_records = []
+
+    for nombre in sorted(nombres):
+
+        user_records.append({
+            filename_column: nombre,
+            "archivo": filenames[nombre],
+            "mail": mails[nombre],
+        })
+
+        # Contar horas
+        hours_per_group = {}
+        for sheet_name, sheet_df in sheet_2_df.items():
+            seldf = sheet_df[sheet_df[filename_column] == nombre]
+            count = 0
+            for _, row in seldf.iterrows():
+                _, ev = parse_into_event(row, com_string_to_add="")
+                count += ev.duration
+            hours_per_group["horas en " + sheet_name] = count
+            
+        user_hour_records.append({
+            filename_column: nombre,
+            "archivo": filenames[nombre],
+            "mail": mails[nombre],
+            **hours_per_group
+        })
+
+    files["_listado_completo.xlsx"] = generate_excel_content(
+        {"listado": pd.DataFrame.from_records(user_records)}
+    )
+    files["_horas_completo.xlsx"] = generate_excel_content(
+        {"listado": pd.DataFrame.from_records(user_hour_records)}
+    )
+    return {
+            "data": create_zip_in_memory(files),
+            "file_name": f"{zip_stem}.zip",
+            "mime": "application/zip",
+    }
 
 
 

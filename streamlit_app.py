@@ -1,6 +1,7 @@
 import streamlit as st
 
-from common import read_into_session, download
+from common import download, read_into_session
+
 
 @st.dialog("Importar desde tu computadora")
 def upload_file_dialog():
@@ -78,6 +79,7 @@ def main():
                 st.Page("page_search_slot.py", title="persona por horario disponible"),
                 st.Page("page_search_com.py", title="comisión"),
                 st.Page("page_search_status.py", title="asignación por estado"),
+                st.Page("page_search_usage.py", title="ocupacion"),
             ],
         }
 
@@ -85,8 +87,11 @@ def main():
     pg.run()
 
 if __name__ == "__main__":
-    # if "df" not in st.session_state:
-    #     read_into_session("demo.xlsx", url="demo.xlsx")
+    import sys
+
+    if len(sys.argv) > 1 and sys.argv[1] == "demo" and "df" not in st.session_state:
+            read_into_session("demo.xlsx", url="demo.xlsx")
+
     st.set_page_config(
         page_title="Asistencia académica", page_icon="🎓",
         layout="wide",

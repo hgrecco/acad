@@ -18,7 +18,7 @@ type DOW = Literal[0, 1, 2, 3, 4, 5, 6]
 # this is necessary to fix a bug in calendar_view
 style.event_radius = 2
 
-version = "2026-03-05"
+version = "2026-07-25"
 
 DOW_2_NUM: dict[str, DOW]= {
     "Lunes": 0,
@@ -116,7 +116,12 @@ class Schedule(defaultdict[DOW, list[ScheduleEvent]]):
 
     def is_busy(self, dow: DOW, start: datetime.time, stop: datetime.time) -> bool:
         return any(not (ev.stop <= start or ev.start >= stop) for ev in self[dow])
-    
+
+    def yield_events(self):
+        for dow, evs in self.items():
+            for ev in evs:
+                yield dow, ev
+
 
 def parse(s):
     if pd.isna(s):
@@ -132,8 +137,12 @@ def parse(s):
     return dow, start.replace(".", ":"), stop.replace(".", ":")
 
 
-def parse_into_event(row: Mapping[str, Any], *, title_prefix: str = "") -> tuple[int, ScheduleEvent]:
-    title = title_prefix + com_string(row)
+def parse_into_event(row: Mapping[str, Any], *, title_prefix: str = "", com_string_to_add: str | None = None) -> tuple[int, ScheduleEvent]:
+    title = title_prefix 
+    if com_string_to_add is None:
+        title += com_string(row)
+    else:
+        title += com_string_to_add
 
     try:
         dow, start_str, stop_str = parse(row["Horarios"])
@@ -419,7 +428,7 @@ def generate_schedule_image(sch: Schedule, buffer: io.BytesIO):
     calendar.save(buffer)
 
 
-def person_view(sdf: pd.DataFrame, options: list[Any], schedule_by_name: dict[str, Schedule], calendar_buffer: io.BytesIO):
+def person_view(sdf: pd.DataFrame, options: list[Any], schedule_by_name: dict[str, Schedule], calendar_buffer: io.BytesIO, append_schedule: Schedule | None = None):
     selected_name = st.selectbox(
         f'Docente ({len(options)})',
         options=options, 
@@ -436,7 +445,18 @@ def person_view(sdf: pd.DataFrame, options: list[Any], schedule_by_name: dict[st
     elements = st.container()
 
     try:
-        generate_schedule_image(sch, calendar_buffer)
+        if append_schedule:
+            new_sch = Schedule()
+            for dow, evs in sch.items():
+                for ev in evs:
+                    new_sch.add_event(dow, ev)
+            for dow, evs in append_schedule.items():
+                for ev in evs:
+                    new_sch.add_event(dow, ev)
+            generate_schedule_image(new_sch, calendar_buffer)
+        else:
+            generate_schedule_image(sch, calendar_buffer)
+                
         calendar_err = ""
     except Exception as ex:
         calendar_err = f"No se pudo generar el horario. Revise que la planilla este correcta.\n{ex}"
