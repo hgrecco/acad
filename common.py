@@ -53,6 +53,7 @@ MULTICOL_COMISION = [COL_FACULTAD, COL_CARRERA] + [COL_ASIGNATURA, COL_YEAR, COL
 COL_NOMBRE = "Nombre"
 COL_HORARIOS = "Horarios"
 COL_STATUS = "Estado"
+COL_HORA_PRESENCIAL = "Hora presencial"
 COL_HORA_VIRTUAL = "Hora virtual"
 COL_OBSERVACIONES = "Observaciones Planilla"
 DERIVED_COL_YEAR_TURNO_COM = "_Año_Turno_Com"
@@ -63,8 +64,8 @@ COL_EMAIL = "email"
 # COL_FACULTAD is added later 
 REQUIRED_COLS = [
     COL_CARRERA, COL_ASIGNATURA, COL_YEAR, COL_YEAR, COL_COMISION,
-    COL_NOMBRE, COL_HORARIOS, COL_STATUS, COL_HORA_VIRTUAL, COL_OBSERVACIONES
-    
+    COL_NOMBRE, COL_HORARIOS, COL_STATUS, COL_HORA_VIRTUAL, COL_OBSERVACIONES,
+    COL_HORA_PRESENCIAL,
 ]
 
 CALENDAR_BUFFER = io.BytesIO()
@@ -76,7 +77,8 @@ def parse_time(s: str) -> datetime.time:
     h, m = s.split(":")
     return datetime.time(int(h.strip()), int(m.strip()))
     
-
+def parse_min(s: str) -> float:
+    return float(s.replace("'", "")) / 60.
 
 class ScheduleEvent(NamedTuple):
     start: datetime.time
@@ -144,25 +146,26 @@ def parse_into_event(row: Mapping[str, Any], *, title_prefix: str = "", com_stri
     else:
         title += com_string_to_add
 
+    tag = EVENT_TAG_ERROR
     try:
-        dow, start_str, stop_str = parse(row["Horarios"])
+        dow, start_str, stop_str = parse(row[COL_HORARIOS])
         dow = DOW_2_NUM[dow]
-        if row[COL_STATUS] in ("X", "XP"):
-            tag = EVENT_TAG_OK
-        elif row[COL_STATUS] in ("LICENCIA"):
-            tag = EVENT_TAG_LICENSE
-        elif row[COL_STATUS] in ("VACANTE"):
-            tag = EVENT_TAG_VACANT
-        else:
-            tag = EVENT_TAG_ERROR
         start = parse_time(start_str)
         stop = parse_time(stop_str)
+
+        if COL_STATUS in row:
+            if row[COL_STATUS] in ("X", "XP"):
+                tag = EVENT_TAG_OK
+            elif row[COL_STATUS] in ("LICENCIA"):
+                tag = EVENT_TAG_LICENSE
+            elif row[COL_STATUS] in ("VACANTE"):
+                tag = EVENT_TAG_VACANT
+
     except Exception as ex:
         title += f" ({row['Horarios']}) {ex}"
         dow = 6
         start = datetime.time(8)
         stop = datetime.time(9)
-        tag = EVENT_TAG_ERROR    
 
     return dow, ScheduleEvent(start, stop, title, tag)
 
@@ -269,6 +272,7 @@ def read(p: str, *, required_columns: tuple[str] = tuple(), ffill_columns: tuple
                 df[COL_YEAR] = df[COL_YEAR].astype(int) 
                 df[COL_STATUS] = df[COL_STATUS].astype(AS_STR_TYPE).fillna("").str.strip()
 
+                df[COL_HORA_PRESENCIAL] = df[COL_HORA_PRESENCIAL].fillna(0).astype(AS_STR_TYPE).str.strip().str.replace("0.0", "0")
                 df[COL_HORA_VIRTUAL] = df[COL_HORA_VIRTUAL].fillna(0).astype(AS_STR_TYPE).str.strip().str.replace("0.0", "0")
                 df[COL_OBSERVACIONES] = df[COL_OBSERVACIONES].fillna("").astype(AS_STR_TYPE).str.strip()
                 

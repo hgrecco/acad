@@ -7,7 +7,7 @@ import io
 from collections import defaultdict
 import zipfile
 
-from common import COL_NOMBRE, COL_ASIGNATURA, COL_CARRERA, COL_COMISION, COL_FACULTAD, COL_HORARIOS, COL_TURNO, COL_YEAR, COL_STATUS, COL_HORA_VIRTUAL, COL_OBSERVACIONES, parse_into_event
+from common import COL_NOMBRE, COL_ASIGNATURA, COL_CARRERA, COL_COMISION, COL_FACULTAD, COL_HORARIOS, COL_TURNO, COL_YEAR, COL_STATUS, COL_HORA_VIRTUAL, COL_OBSERVACIONES, COL_HORA_PRESENCIAL, parse_min
 
 class Download(TypedDict):
     data: bytes
@@ -104,8 +104,15 @@ def converte_dfs_to_excel(sheet_2_df: dict[str, pd.DataFrame], filename_column: 
             seldf = sheet_df[sheet_df[filename_column] == nombre]
             count = 0
             for _, row in seldf.iterrows():
-                _, ev = parse_into_event(row, com_string_to_add="")
-                count += ev.duration
+                try:
+                    count += parse_min(row[COL_HORA_PRESENCIAL])
+                except Exception:
+                    pass
+                try:
+                    count += parse_min(row[COL_HORA_VIRTUAL])
+                except Exception:
+                    pass
+            
             hours_per_group["horas en " + sheet_name] = count
             
         user_hour_records.append({
@@ -131,7 +138,7 @@ def converte_dfs_to_excel(sheet_2_df: dict[str, pd.DataFrame], filename_column: 
 
 def export_form(sdf: pd.DataFrame, filename_column: str, filters: list[tuple[str, str, list[str]]] = [], *, zip_stem: str = "archivo", mail_mapping: dict[str, tuple[str, str]] | None = None):
     EXPORT_COLUMNS = [
-        COL_FACULTAD, COL_CARRERA, COL_ASIGNATURA, COL_YEAR, COL_TURNO, COL_COMISION, COL_HORARIOS, COL_HORA_VIRTUAL, COL_OBSERVACIONES, COL_NOMBRE
+        COL_FACULTAD, COL_CARRERA, COL_ASIGNATURA, COL_YEAR, COL_TURNO, COL_COMISION, COL_HORARIOS, COL_HORA_PRESENCIAL, COL_HORA_VIRTUAL, COL_OBSERVACIONES, COL_NOMBRE
     ]
 
     data_to_download = None
