@@ -46,9 +46,8 @@ if asignatura and asignatura != NO_FILTER:
 else:
     sdf2 = sdf1
     com = None
-    year = None
 
-if com and asignatura != NO_FILTER:
+if com and com != NO_FILTER:
     sdf3 = sdf2[sdf2[DERIVED_COL_YEAR_TURNO_COM] == com]
 else:
     sdf3 = sdf2
