@@ -5,6 +5,8 @@ import datetime
 
 from common import DOW_2_NUM, COL_NOMBRE, person_view, build_schedule, CALENDAR_BUFFER, COL_STATUS, com_string, parse_into_event, ScheduleEvent, Schedule, EVENT_TAG_VACANT, COL_FACULTAD
 
+TODAS = "Todas"
+
 @st.cache_data
 def get_vacant_options(sdf: pd.DataFrame) -> dict[str, tuple[int, ScheduleEvent]]:
     return dict(sorted(
@@ -12,6 +14,11 @@ def get_vacant_options(sdf: pd.DataFrame) -> dict[str, tuple[int, ScheduleEvent]
           for _, row in sdf[sdf[COL_STATUS] == "VACANTE"].iterrows()
         }.items()
     ))
+
+
+@st.cache_data
+def get_facultad_options(sdf: pd.DataFrame) -> list[str]:
+    return [TODAS, ] + sorted(sdf[COL_FACULTAD].unique())
 
 
 @st.cache_data
@@ -87,7 +94,14 @@ with st.container(border=True):
         if facultad_actual:
             misma_facultad = st.checkbox(f"en {picker.split(",")[0]}")
         else:
-            misma_facultad = False
+            facultad_actual = st.selectbox(
+                "Facultad",
+                options=get_facultad_options(df)
+            )
+            if facultad_actual == TODAS:
+                misma_facultad = False
+            else:
+                misma_facultad = True
     with cols[2]:
         misma_franja = st.checkbox("en la misma franja horaria")
 
@@ -95,7 +109,7 @@ options = []
 for selected_name, gdf in df[sel].groupby(COL_NOMBRE):
     if selected_name == "":
         continue
-    if misma_facultad and not misma_facultad in gdf[COL_FACULTAD].values:
+    if misma_facultad and not facultad_actual in gdf[COL_FACULTAD].values:
         continue
     if selected_name in schedule_by_name:
         sch = schedule_by_name[selected_name]
