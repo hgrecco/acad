@@ -86,6 +86,8 @@ with st.container(border=True):
     with cols[1]:
         if facultad_actual:
             misma_facultad = st.checkbox(f"en {picker.split(",")[0]}")
+        else:
+            misma_facultad = False
     with cols[2]:
         misma_franja = st.checkbox("en la misma franja horaria")
 
