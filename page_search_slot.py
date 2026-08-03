@@ -73,13 +73,19 @@ if df.attrs["personas"]:
 else:
     sel =  slice(-1)
 
+try:
+    facultad_actual = picker.split(",")[0]
+except Exception:
+    facultad_actual = None
+
 with st.container(border=True):
     st.text("Sólo incluir personas que tengan otras actividades ")
     cols = st.columns(3)
     with cols[0]:
         present = st.checkbox(f"el {day}")
     with cols[1]:
-        misma_facultad = st.checkbox(f"en {picker.split(",")[0]}")
+        if facultad_actual:
+            misma_facultad = st.checkbox(f"en {picker.split(",")[0]}")
     with cols[2]:
         misma_franja = st.checkbox("en la misma franja horaria")
 
@@ -87,7 +93,7 @@ options = []
 for selected_name, gdf in df[sel].groupby(COL_NOMBRE):
     if selected_name == "":
         continue
-    if misma_facultad and not picker.split(",")[0] in gdf[COL_FACULTAD].values:
+    if misma_facultad and not misma_facultad in gdf[COL_FACULTAD].values:
         continue
     if selected_name in schedule_by_name:
         sch = schedule_by_name[selected_name]
